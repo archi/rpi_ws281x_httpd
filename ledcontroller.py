@@ -7,6 +7,7 @@
 
 import threading
 import time
+import subprocess
 from neopixel import *
 
 # LED configuration, based on examples by Jeremy Garff:
@@ -23,6 +24,25 @@ class LEDController ():
         self.leds = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS)
         # Intialize the library (must be called once before other functions).
         self.leds.begin()
+
+        self.colorCodes = [
+                Color(255,255,255),
+                Color(0,0,0),
+                Color(0,0,127),
+                Color(0,147,0),
+                Color(255,0,0),
+                Color(127,0,0),
+                Color(156,0,156),
+                Color(252,127,0),
+                Color(255,255,0),
+                Color(0,252,0),
+                Color(0,147,147),
+                Color(0,255,255),
+                Color(0,0,252),
+                Color(255,0,255),
+                Color(127,127,127),
+                Color(210,210,210)]
+
 
     # Define functions which animate LEDs in various ways.
     def colorWipe(self, color, wait_ms=50):
@@ -44,3 +64,19 @@ class LEDController ():
 
     def show (self):
         self.leds.show ()
+
+    def xyToId (self, x, y):
+        return 16
+
+    def char (self, c):
+        if len(c) != 1:
+            return False
+
+        t = subprocess.Popen(['toilet', '-F', 'gay', '-f', 'block', '-E', 'irc', c])
+        out, err = t.communicate ()
+
+        x = 0
+        y = 0
+
+
+        return True

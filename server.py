@@ -7,20 +7,41 @@
 import string,cgi,time
 from os import curdir, sep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import sys, traceback
 
 from neopixel import *
 from ledcontroller import LEDController
 
-httpport = 8080
+httpport = 80
 ctrl = LEDController ()
+test_mode = True
 
 def getHex (s):
-    i = int(s)
+    i = 0
+    try:
+        i = int(s)
+    except Exception:
+        return None
+
     if i >= 0 and i <= 255:
         return i
     return None
 
+def parseColor(raw):
+    c = raw.split (",", 3)
+    if len(c) != 3:
+        return None
+    r = getHex (c[0])
+    g = getHex (c[1])
+    b = getHex (c[2])
+    if r == None or b == None or g == None:
+        return None
+    return Color (r,g,b)
+
 class WSHandler(BaseHTTPRequestHandler):
+
+    def doc(self, cmd, descr):
+        self.wfile.write ('<b><a href='+cmd+'>'+cmd+'</a></b>: '+descr+'<br>')
 
     def status(self, scode, msg=None):
         self.responded = True
@@ -28,19 +49,33 @@ class WSHandler(BaseHTTPRequestHandler):
         self.send_header ('Content-type', 'text/html')
         self.end_headers ()
         if (msg != None):
-            self.wfile.write ("Status " + str(scode) + ": " + msg + "\n<br>");
+            if (msg):
+                self.wfile.write ("Status " + str(scode) + ": " + msg + "\n<br>");
         else:
             self.wfile.write ("Status " + str(scode) + "\n<br>");
         return
+        
 
     def do_GET(self):
         self.responded = False
         try:
             cmd = self.path.split ("/", 7)
-            if (cmd[1] == 'test'):
+            opts = len (cmd) - 2
+            if opts == -1 or cmd[1] == "":
+                self.status (200, False)
+                self.wfile.write ("rpi_ws281x_httpd - <a href='http://www.github.com/archi/rpi_ws281x_httpd/'>Source on github</a><hr>Commands in this version:<br>")
+                self.doc ("fill", "Set all LEDs to a given color")
+                self.doc ("set", "Set a single LED to a given color")
+                self.doc ("clear", "Clear all LEDs")
+                if test_mode:
+                    self.doc ("test", "Test parameter count and splitting [debug option!]")
+                self.wfile.write (" <hr>Usually, colors are specified as <i>r,g,b</i>, where each value of needs to be in the range of 0..255. I.e. white is 255,255,255 and black/off 0,0,0.")
+                return
+
+            elif test_mode and cmd[1] == 'test':
                 i = 0
                 self.status (200)
-                self.wfile.write ("Length: " + str(len(cmd) - 1));
+                self.wfile.write ("Length: " + str(opts - 1));
                 for s in cmd:
                     if i == 0 or i == 1:
                         i+=1
@@ -51,58 +86,56 @@ class WSHandler(BaseHTTPRequestHandler):
             elif (cmd[1] == 'clear'):
                 ctrl.fastWipe (Color(0,0,0))
                 self.status (200, "Clearing")
-            
-            elif (cmd[1] == 'full'):
-                ctrl.fastWipe (Color(255,255,255))
-                self.status (200, "Clearing")
 
-            elif (cmd[1] == 'fullcolor'):
-                e = False
-                if len(cmd) != 5:
-                    e = True
-                else:
-                    r = getHex (cmd[2])
-                    g = getHex (cmd[3])
-                    b = getHex (cmd[4])
+            elif cmd[1] == 'fill':
+                c = None
+                if opts == 1:
+                    c = parseColor (cmd[2])
 
-                    if r == None or g == None or b == None:
-                        e = True
-
-                if e:
-                    self.status (400, "Bad Request, use fullcolor/&ltr&gt;/&lt;g&gt;/&lt;b&gt;<br> with values for R G B in 0..255.")
+                if c != None:
+                    ctrl.fastWipe (c)
+                    self.status (200, "OK")
                     return
-
-                ctrl.fastWipe (Color (r,g,b))
-                self.status (200, "OK")
+                self.status (400, "Bad Request, use /fill/&lt;color&gt;")
 
             elif (cmd[1] == 'set'):
-                e = False
-                if len(cmd) != 6:
-                    e = True
-                else:
-                    r = getHex (cmd[3])
-                    g = getHex (cmd[4])
-                    b = getHex (cmd[5])
+                c = None
+                if opts == 2:
+                    c = parseColor (cmd[3])
 
-                    if r == None or g == None or b == None:
-                        e = True
-
-                if e:
-                    self.status (400, "Bad Request, use set/&lt;id&gt;/&ltr&gt;/&lt;g&gt;/&lt;b&gt;<br> with values for R G B in 0..255. Setting an out-of-bounds LED is a NOP")
+                if c != None:
+                    ctrl.setColor (int(cmd[2]), c)
+                    ctrl.show ()
+                    self.status (200)
                     return
 
-                ctrl.setColor (int(cmd[2]), Color (r,g,b))
-                ctrl.show ()
-                self.status (200, "OK")
+                self.status (400, "Bad Request, use set/&lt;id&gt;/&lt;color&gt;")
+
+            elif (cmd[1] == 'char'):
+                color = None
+                char = None
+                if opts == 2 and len(cmd[2]) == 1:
+                    color = parseColor (cmd[3])
+                    char = cmd[2]
+
+                if color != None:
+                    # TODO
+                    self.status (200, "Syntax OK, but command not supported, yet.")
+                    return
+                
+                self.status (400, "Bad Request, use char/&lt;char&gt;/&lt;color&gt;")
 
             if (not self.responded):
-                self.status (404, "Not found: " + self.path);
+                self.status (404, "Not found!");
             return
         except Exception as e:
             if not self.responded:
-                self.status (500, "Exception: " + str(e))
-            else:
-                self.wfile.write ("Exception: " + str(e))
+                self.status (500)
+
+            exType, ex, tb = sys.exc_info ()
+            self.wfile.write ("<hr><h1>Exception</h1>"+str(e)+"<pre>")
+            traceback.print_exception (exType, ex, tb, 64, self.wfile)
+            self.wfile.write ("</pre>")
             return
      
 def main():
