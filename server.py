@@ -4,10 +4,9 @@
 #
 # Author: Sebastian Meyer <https://github.com/archi>
 
-import string,cgi,time
+import string,cgi,time,sys,traceback,urllib
 from os import curdir, sep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import sys, traceback
 
 from neopixel import *
 from ledcontroller import LEDController
@@ -112,6 +111,22 @@ class WSHandler(BaseHTTPRequestHandler):
                     return
 
                 self.status (400, "Bad Request, use set/&lt;id&gt;/&lt;color&gt;")
+
+            elif cmd[1] == 'chars':
+                if opts != 1 or len (cmd[2]) > 128:
+                    self.status (400, "Too many chars")
+                    return
+
+                s = urllib.unquote(cmd[2]).decode('utf8')
+                
+                for i in range (len(s)):
+                    ctrl.fastWipe (Color(0,0,0))
+                    ctrl.char (s[i])
+                    ctrl.show ()
+                    time.sleep(0.5)
+
+                self.status (200)
+
 
             elif (cmd[1] == 'char'):
                 if opts == 1 and len(cmd[2]) == 1:

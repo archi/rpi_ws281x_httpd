@@ -57,7 +57,7 @@ class LEDController ():
         self.leds.show ()
 
     def xyToId (self, x, y):
-        return y * 8 + x + 2
+        return y * 8 + x
 
     def colorCode (self, code):
         return self.colorCodes[code]
