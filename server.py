@@ -85,6 +85,7 @@ class WSHandler(BaseHTTPRequestHandler):
 
             elif (cmd[1] == 'clear'):
                 ctrl.fastWipe (Color(0,0,0))
+                ctrl.show ()
                 self.status (200, "Clearing")
 
             elif cmd[1] == 'fill':
@@ -94,6 +95,7 @@ class WSHandler(BaseHTTPRequestHandler):
 
                 if c != None:
                     ctrl.fastWipe (c)
+                    ctrl.show ()
                     self.status (200, "OK")
                     return
                 self.status (400, "Bad Request, use /fill/&lt;color&gt;")
@@ -112,18 +114,14 @@ class WSHandler(BaseHTTPRequestHandler):
                 self.status (400, "Bad Request, use set/&lt;id&gt;/&lt;color&gt;")
 
             elif (cmd[1] == 'char'):
-                color = None
-                char = None
-                if opts == 2 and len(cmd[2]) == 1:
-                    color = parseColor (cmd[3])
-                    char = cmd[2]
-
-                if color != None:
-                    # TODO
+                if opts == 1 and len(cmd[2]) == 1:
+                    ctrl.fastWipe (Color(0,0,0))
+                    ctrl.char (cmd[2])
+                    ctrl.show ()
                     self.status (200, "Syntax OK, but command not supported, yet.")
                     return
                 
-                self.status (400, "Bad Request, use char/&lt;char&gt;/&lt;color&gt;")
+                self.status (400, "Bad Request, use char/&lt;char&gt;")
 
             if (not self.responded):
                 self.status (404, "Not found!");

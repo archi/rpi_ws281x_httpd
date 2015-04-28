@@ -44,18 +44,9 @@ class LEDController ():
                 Color(210,210,210)]
 
 
-    # Define functions which animate LEDs in various ways.
-    def colorWipe(self, color, wait_ms=50):
-        """Wipe color across display a pixel at a time."""
-        for i in range(self.leds.numPixels()):
-            self.leds.setPixelColor(i, color)
-            self.leds.show()
-            time.sleep(wait_ms/1000.0)
-
     def fastWipe(self, color):
         for i in range(self.leds.numPixels ()):
             self.leds.setPixelColor(i, color)
-        self.leds.show ()
 
     def setColor (self, ledid, color):
         if ledid > self.leds.numPixels ():
@@ -66,17 +57,46 @@ class LEDController ():
         self.leds.show ()
 
     def xyToId (self, x, y):
-        return 16
+        return y * 8 + x + 2
+
+    def colorCode (self, code):
+        return self.colorCodes[code]
 
     def char (self, c):
         if len(c) != 1:
             return False
 
-        t = subprocess.Popen(['toilet', '-F', 'gay', '-f', 'block', '-E', 'irc', c])
-        out, err = t.communicate ()
+        p = subprocess.Popen(['toilet', '-F', 'gay', '-f', 'block', '-E', 'irc', c], stdout=subprocess.PIPE)
+        t, err = p.communicate ()
 
         x = 0
         y = 0
+        c = Color (0,0,0)
 
+        p = 0
+        pp = len (t)
+        while p < pp:
+            if t[p] == " ":
+                if t[p+1] == " ":
+                    p+=1
+                x+=1
+            elif t[p] == "_":
+                i = self.xyToId (x,y - 1)
+                self.leds.setPixelColor (i, c)
+                p+=1
+                x+=1
+            elif t[p] == "":
+                cc = int(t[p+1])
+                if t[p+2] != "_":
+                    cc*=10
+                    cc+=int(t[p+2])
+                    p+=2
+                else:
+                    p+=1
+                c = self.colorCode (cc)
+            elif t[p] == "\n":
+                x = 0
+                y+=1
+            p+=1
 
         return True
