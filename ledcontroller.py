@@ -5,25 +5,36 @@
 # 
 # Author: Sebastian Meyer <https://github.com/archi>
 
+USE_UNICORNHAT_WS2812 = True
+
 import threading
 import time
 import subprocess
-from neopixel import *
+
+import ws2812
+from neopixel import *;
 
 # LED configuration, based on examples by Jeremy Garff:
 LED_COUNT      = 40      # Number of LED pixels.
 LED_PIN        = 18      # GPIO pin connected to the pixels (must support PWM!).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_DMA        = 5       # DMA channel to use for generating signal (try 5)
-LED_BRIGHTNESS = 32      # Set to 0 for darkest and 255 for brightest
+LED_BRIGHTNESS = 64      # Set to 0 for darkest and 255 for brightest
 LED_INVERT     = True    # True to invert the signal (when using NPN transistor level shift)
 
 class LEDController ():
+    def useUnicornhatWs2812 (self):
+        return USE_UNICORNHAT_WS2812
+
     def __init__ (self):
-        # Create NeoPixel object with appropriate configuration.
-        self.leds = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS)
-        # Intialize the library (must be called once before other functions).
-        self.leds.begin()
+        if USE_UNICORNHAT_WS2812:
+            self.leds = ws2812;
+            self.leds.init (LED_COUNT)
+        else:
+            # Create NeoPixel object with appropriate configuration.
+            self.leds = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS)
+            # Intialize the library (must be called once before other functions).
+            self.leds.begin()
 
         self.colorCodes = [
                 Color(255,255,255),
@@ -43,15 +54,23 @@ class LEDController ():
                 Color(127,127,127),
                 Color(210,210,210)]
 
+    def setPixelColor (self, idx, color):
+        if USE_UNICORNHAT_WS2812:
+            r = color >> 16 & 0xff
+            g = color >> 8 & 0xff
+            b = color & 0xff
+            self.leds.setPixelColor (idx, r, g, b)
+        else:
+            self.leds.setPixelColor (idx, color)
 
     def fastWipe(self, color):
         for i in range(self.leds.numPixels ()):
-            self.leds.setPixelColor(i, color)
+            self.setPixelColor(i, color)
 
     def setColor (self, ledid, color):
         if ledid > self.leds.numPixels ():
             return
-        self.leds.setPixelColor (ledid, color)
+        self.setPixelColor (ledid, color)
 
     def show (self):
         self.leds.show ()
@@ -82,7 +101,7 @@ class LEDController ():
                 x+=1
             elif t[p] == "_":
                 i = self.xyToId (x,y - 1)
-                self.leds.setPixelColor (i, c)
+                self.setPixelColor (i, c)
                 p+=1
                 x+=1
             elif t[p] == "":

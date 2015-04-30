@@ -8,11 +8,15 @@ import string,cgi,time,sys,traceback,urllib
 from os import curdir, sep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
-from neopixel import *
 from ledcontroller import LEDController
+ctrl = LEDController ()
+
+if ctrl.useUnicornhatWs2812:
+    from neopixel import *
+else:
+    from color import *
 
 httpport = 80
-ctrl = LEDController ()
 test_mode = True
 
 def getHex (s):
@@ -66,6 +70,8 @@ class WSHandler(BaseHTTPRequestHandler):
                 self.doc ("fill", "Set all LEDs to a given color")
                 self.doc ("set", "Set a single LED to a given color")
                 self.doc ("clear", "Clear all LEDs")
+                self.doc ("char", "Draw a single char using toilet")
+                self.doc ("chars", "Draw some chars using toilet")
                 if test_mode:
                     self.doc ("test", "Test parameter count and splitting [debug option!]")
                 self.wfile.write (" <hr>Usually, colors are specified as <i>r,g,b</i>, where each value of needs to be in the range of 0..255. I.e. white is 255,255,255 and black/off 0,0,0.")
