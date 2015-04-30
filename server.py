@@ -7,14 +7,9 @@
 import string,cgi,time,sys,traceback,urllib
 from os import curdir, sep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-
 from ledcontroller import LEDController
+from neopixel import *;
 ctrl = LEDController ()
-
-if ctrl.useUnicornhatWs2812:
-    from neopixel import *
-else:
-    from color import *
 
 httpport = 80
 test_mode = True
